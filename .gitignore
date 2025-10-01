@@ -129,8 +129,7 @@ dmypy.json
 .pyre/
 
 # Project specific
-./data/cache/
-data/
+/data
 logs/
 *.db
 *.sqlite
