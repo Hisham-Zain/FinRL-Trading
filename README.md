@@ -53,10 +53,8 @@ finrl-trading/
 
 - **Python 3.11+**
 - **Alpaca Account** (for live trading)
-- **Data Source APIs** (optional):
-  - FMP API Key (high-quality data, recommended)
-  - WRDS Account (academic database)
-  - Yahoo Finance (free, no configuration needed)
+- **Data Source APIs**:
+  - FMP API Key
 
 ### Quick Start
 
@@ -97,6 +95,12 @@ cat examples/README.md
 
 # Run complete workflow tutorial (recommended)
 jupyter notebook examples/FinRL_Full_Workflow.ipynb
+```
+
+# For offline version, unzip data/finrl_trading.7z andrun the following command
+
+```
+jupyter notebook examples/FinRL_offline_Workflow.ipynb
 ```
 
 **Tutorial Contents:**
