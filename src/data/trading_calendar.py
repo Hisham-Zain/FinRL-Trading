@@ -11,6 +11,7 @@ from typing import List, Set
 from datetime import datetime, date
 import pandas as pd
 from functools import lru_cache
+import tzlocal
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,19 @@ def _get_calendar_cached(exchange: str):
 @lru_cache(maxsize=256)
 def _cached_trading_days(exchange: str, start_date: str, end_date: str) -> tuple:
     cal = _get_calendar_cached(exchange)
-    schedule = cal.schedule(start_date=start_date, end_date=end_date)
+    # INSERT_YOUR_CODE
+    # Get current timezone name as tz parameter for calendar schedule
+    tzinfo = None
+    try:
+        # pandas >= 1.1: dt.now().astimezone().tzinfo.zone (linux/mac), or tzlocal.get_localzone_name() if installed
+        tzinfo = tzlocal.get_localzone_name()
+    except Exception:
+        try:
+            # Fallback to .tzname(), not always ideal
+            tzinfo = datetime.now().astimezone().tzname()
+        except Exception:
+            tzinfo = "UTC"
+    schedule = cal.schedule(start_date=start_date, end_date=end_date, tz=tzinfo)
     return tuple(schedule.index.strftime('%Y-%m-%d').tolist())
 
 

@@ -16,11 +16,12 @@ from abc import ABC
 import pandas as pd
 from pathlib import Path
 import yfinance as yf
+import pandas_market_calendars as mcal
 import requests
-from bs4 import BeautifulSoup
 import numpy as np
 import concurrent.futures
 from tqdm import tqdm
+import pandas_market_calendars as mcal
 
 import sys
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
@@ -382,11 +383,35 @@ class FMPFetcher(BaseDataFetcher, DataSource):
                 def index_by_date(items: List[Dict[str, Any]]) -> Dict[pd.Timestamp, Dict[str, Any]]:
                     out = {}
                     for it in items or []:
-                        if 'date' in it:
-                            try:
-                                out[pd.to_datetime(it['date'])] = it
-                            except Exception:
-                                continue
+                        key_ts = None
+                        try:
+                            year = it.get('calendarYear')
+                            period_raw = it.get('period')
+                            period = str(period_raw).upper() if period_raw is not None else None
+                            if year is not None and period:
+                                # 统一使用 calendarYear + period(Q1/Q2/Q3/Q4) 的季度末日期作为键
+                                q_map = {
+                                    'Q1': (3, 31), 
+                                    'Q2': (6, 30), 
+                                    'Q3': (9, 30), 
+                                    'Q4': (12, 31),
+                                    'FY': (12, 31),  # 若出现 FY，按 Q4 处理
+                                }
+                                md = q_map.get(period)
+                                if md:
+                                    key_ts = pd.Timestamp(int(year), md[0], md[1])
+                            # 若缺失 calendarYear/period，则回退到原始 date，再映射到所在公历季度末
+                            if key_ts is None and 'date' in it and it.get('date'):
+                                d = pd.to_datetime(it['date'], errors='coerce')
+                                if pd.notna(d):
+                                    q = ((int(d.month) - 1) // 3) + 1
+                                    end_month = q * 3
+                                    end_day = 31 if end_month in (3, 12) else 30
+                                    key_ts = pd.Timestamp(int(d.year), end_month, end_day)
+                        except Exception:
+                            key_ts = None
+                        if key_ts is not None:
+                            out[key_ts] = it
                     return out
 
                 income_by_date = index_by_date(income_data)
@@ -412,12 +437,6 @@ class FMPFetcher(BaseDataFetcher, DataSource):
                     balance_q = balance_by_date.get(qd, {})
                     cash_q = cashflow_by_date.get(qd, {})
                     ratio_q = ratios_by_date.get(qd, {})
-                    if ratio_q is None:
-                        # 尝试仅用年和月份匹配
-                        for rdate in ratios_by_date:
-                            if rdate.year == qd.year and rdate.month == qd.month:
-                                ratio_q = ratios_by_date[rdate]
-                                break
 
                     # shares outstanding
                     shares_out = balance_q.get('commonStockSharesOutstanding') or income_q.get('weightedAverageShsOutDil') or income_q.get('weightedAverageShsOut')
@@ -621,6 +640,21 @@ class FMPFetcher(BaseDataFetcher, DataSource):
                       start_date: str, end_date: str) -> pd.DataFrame:
         """Get price data from FMP with incremental updates."""
         api_key = self._get_api_key()
+
+        # If end_date is today in exchange timezone and current time is before market close,
+        # move end_date back by one day to avoid fetching incomplete day
+        now_local = pd.Timestamp.now(tz='America/New_York')
+        if now_local.date() <= pd.to_datetime(end_date).date():
+            schedule = mcal.get_calendar(name='NYSE').schedule(start_date=end_date, end_date=end_date, tz='America/New_York')
+
+            if not schedule.empty:
+                try:
+                    close_time = schedule['market_close'].iloc[-1]
+                    # If user asked up to today and before close, shift end_date back one day
+                    if now_local.time() < close_time.time():
+                        end_date = (now_local - pd.Timedelta(days=1)).strftime('%Y-%m-%d')
+                except Exception:
+                    pass
 
         # Step 1: Check database for existing data
         existing_data = self.data_store.get_price_data(tickers['tickers'], start_date, end_date)

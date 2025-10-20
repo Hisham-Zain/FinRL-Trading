@@ -530,7 +530,7 @@ class MLStockSelectionStrategy(BaseStrategy):
             raise ValueError("'y_return' 缺失，请使用 data_fetcher 获取的真实基本面数据")
 
         # Select numeric feature columns (exclude ids and label/date)
-        exclude_cols = {'gvkey', 'tic', 'gsector', 'datadate', 'y_return', 'prccd', 'ajexdi', 'adj_close'}
+        exclude_cols = {'gvkey', 'tic', 'gsector', 'datadate', 'y_return', 'prccd', 'ajexdi', 'adj_close', 'adj_close_q'}
         numeric_cols: List[str] = []
         for col in fundamentals.columns:
             if col in exclude_cols:
@@ -554,10 +554,8 @@ class MLStockSelectionStrategy(BaseStrategy):
         y = df['y_return'].astype(float)
         dates = df['datadate']
 
-        # Align by dropping rows with NaN in either X or y
-        valid_mask = y.notna()
-        if X.isna().any(axis=1).any():
-            valid_mask &= ~X.isna().any(axis=1)
+        # Align by dropping rows with NaN in X only (ignore y_return nan check)
+        valid_mask = ~X.isna().any(axis=1)
 
         X = X.loc[valid_mask]
         y = y.loc[valid_mask]
@@ -845,9 +843,10 @@ class MLStockSelectionStrategy(BaseStrategy):
             for dt, g in grouped:
                 if g.empty:
                     continue
-                thr = g['predicted_return'].quantile(top_quantile)
-                per_date_thresholds[dt] = float(thr) if pd.notna(thr) else float('nan')
-                sel = g[g['predicted_return'] >= thr][['gvkey', 'predicted_return']].copy()
+                thr_raw = g['predicted_return'].quantile(top_quantile)
+                thr = max(float(thr_raw), 0.0) if pd.notna(thr_raw) else float('nan')
+                per_date_thresholds[dt] = thr
+                sel = g[(g['predicted_return'] >= thr) & (g['predicted_return'] > 0)][['gvkey', 'predicted_return']].copy()
                 if len(sel) == 0:
                     continue
                 
@@ -899,8 +898,9 @@ class MLStockSelectionStrategy(BaseStrategy):
                     metadata={'error': 'no_predictions', **meta}
                 )
 
-            threshold = pred_df['predicted_return'].quantile(top_quantile)
-            selected = pred_df[pred_df['predicted_return'] >= threshold][['gvkey', 'predicted_return']].copy()
+            threshold_raw = pred_df['predicted_return'].quantile(top_quantile)
+            threshold = max(float(threshold_raw), 0.0) if pd.notna(threshold_raw) else float('nan')
+            selected = pred_df[(pred_df['predicted_return'] >= threshold) & (pred_df['predicted_return'] > 0)][['gvkey', 'predicted_return']].copy()
 
             if len(selected) == 0:
                 self.logger.warning("没有股票达到阈值")
@@ -1209,7 +1209,7 @@ if __name__ == "__main__":
     print(result_single_mv.weights[['gvkey', 'weight']].head(10))
     result_single_mv.weights.to_csv(r'.\data\ml_weights_single_mv.csv', index=False)
 
-    exit()
+    # exit()
 
     # 滚动模式（多日期）- 等权重
     result_rolling = strategy.generate_weights(
