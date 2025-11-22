@@ -97,12 +97,6 @@ cat examples/README.md
 jupyter notebook examples/FinRL_Full_Workflow.ipynb
 ```
 
-#### For offline version, unzip data/finrl_trading.7z andrun the following command
-
-```
-jupyter notebook examples/FinRL_offline_Workflow.ipynb
-```
-
 **Tutorial Contents:**
 - ✅ S&P 500 components data acquisition
 - ✅ Fundamental and historical price data fetching
@@ -265,35 +259,6 @@ print(f"Execution success: {result.success}")
 - **Multi-environment Support**: Development, testing, production configurations
 - **Centralized Management**: All settings in one place
 
-## 🔄 Data Source Management
-
-The platform intelligently selects the best available data source based on your API configuration:
-
-### Data Source Priority
-1. **FMP (Financial Modeling Prep)** - Highest quality, most comprehensive data
-2. **WRDS (Wharton Research Data Services)** - Academic database with extensive historical data
-3. **Yahoo Finance** - Free, always available fallback
-
-### Automatic Selection Logic
-```python
-# System automatically detects available sources
-if FMP_API_KEY:
-    use_fmp()        # Premium data
-elif WRDS_USERNAME:
-    use_wrds()      # Academic data
-else:
-    use_yahoo()     # Free data
-```
-
-### Data Source Comparison
-
-| Feature | Yahoo Finance | FMP | WRDS |
-|---------|---------------|-----|------|
-| Cost | Free | Paid API | Academic Access |
-| Historical Data | 2+ years | 10+ years | 50+ years |
-| Fundamentals | Limited | Comprehensive | Extensive |
-| Real-time | Limited | Good | Limited |
-| Rate Limits | Moderate | Generous | None |
 
 ## 🔧 Configuration
 
@@ -315,8 +280,7 @@ APCA_BASE_URL=https://paper-api.alpaca.markets  # Paper Trading
 
 # Data Sources (Optional, prioritized: FMP > WRDS > Yahoo)
 FMP_API_KEY=your_fmp_api_key           # Financial Modeling Prep
-WRDS_USERNAME=your_wrds_username       # WRDS Database
-WRDS_PASSWORD=your_wrds_password
+
 
 # Risk Management
 TRADING_MAX_ORDER_VALUE=100000         # Maximum order value
@@ -356,8 +320,6 @@ The backtesting engine provides comprehensive quantitative analysis:
 - **Calmar Ratio**: Return ÷ Maximum Drawdown
 
 ### Tail Risk Measures
-- **VaR (95%)**: Value at Risk at 95% confidence
-- **CVaR (95%)**: Conditional Value at Risk
 - **Skewness & Kurtosis**: Return distribution characteristics
 
 ### Benchmarking
@@ -382,19 +344,12 @@ We welcome contributions! Please follow these guidelines:
    pip install pytest black flake8 mypy
    ```
 4. **Make your changes** with proper testing
-5. **Run quality checks**
-   ```bash
-   black src/
-   flake8 src/
-   mypy src/
-   pytest tests/
-   ```
-6. **Commit and push**
+5. **Commit and push**
    ```bash
    git commit -m "Add: your feature description"
    git push origin feature/your-feature-name
    ```
-7. **Open a Pull Request**
+6. **Open a Pull Request**
 
 ### Code Standards
 
