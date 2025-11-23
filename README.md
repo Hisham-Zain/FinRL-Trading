@@ -4,7 +4,7 @@
 
 # FinRL Trading Platform v2.0
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/80fe89bb-fb09-4267-b29a-76030512f8cf" width="600">
+  <img src="https://github.com/user-attachments/assets/80fe89bb-fb09-4267-b29a-76030512f8cf" width="500">
 </p>
 
 [![Downloads](https://static.pepy.tech/badge/finrl-trading)](https://pepy.tech/project/finrl-trading)
